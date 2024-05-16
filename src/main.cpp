@@ -121,7 +121,7 @@ void loop() {
         lcd.print("tks");
         lcd.setCursor(0, 1);
         lcd.print("Dist: ");
-        lcd.print((encoderPos * circum) / 20);
+        lcd.print((encoderPos / 20.0) * circum);
         lcd.setCursor(14, 1);
         lcd.print("cm");
 
