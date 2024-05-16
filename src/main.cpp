@@ -101,7 +101,7 @@ void loop() {
   } else if ((buttonValue == 2) && (!calculated)) {
     lcd.clear();
 
-    circum = (1.0 / (encoderPos / 20)) * 100; // 20 ticks per revolution
+    circum = (1.0 / (encoderPos / 20.0)) * 100; // 20 ticks per revolution
     diam = circum / 3.14159;
     encoderPos = 0;
 
