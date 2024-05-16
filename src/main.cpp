@@ -18,11 +18,13 @@ volatile int buttonValue = 0;
 volatile float circum;
 volatile float diam;
 volatile unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 200;
+unsigned long debounceDelay = 100;
 volatile bool recordingPrinted = false;
 volatile bool calculated = false;
 volatile bool menuChange = false;
-
+volatile bool buttonPressed = false;
+volatile unsigned long buttonPressedTime = 0;
+volatile bool buttonLongPressed = false;
 
 void setup() {
   pinMode(PIN_A, INPUT_PULLUP);
@@ -37,58 +39,65 @@ void setup() {
   PCMSK2 |= B00010000;
 
   lcd.init();
-  lcd.clear();         
+  lcd.clear();
   lcd.backlight();
 
   lcd.print("RECORD");
-  
 }
 
 void aFunction() {
   reading = PIND & 0xC;
-  if(reading == B00001100 && aFlag) {
-    if (encoderPos > 0){
-      encoderPos --;
+  if (reading == B00001100 && aFlag) {
+    if (encoderPos > 0) {
+      encoderPos--;
     }
     bFlag = 0;
     aFlag = 0;
-  }
-  else if (reading == B00000100) bFlag = 1;
+  } else if (reading == B00000100)
+    bFlag = 1;
 }
 
 void bFunction() {
   reading = PIND & 0xC;
   if (reading == B00001100 && bFlag) {
-    encoderPos ++;
+    encoderPos++;
     bFlag = 0;
     aFlag = 0;
-  }
-  else if (reading == B00001000) aFlag = 1;
+  } else if (reading == B00001000)
+    aFlag = 1;
 }
 
-ISR (PCINT2_vect) {
+ISR(PCINT2_vect) {
   unsigned long currentTime = millis();
-  
-  if ((currentTime - lastDebounceTime) > debounceDelay) {
-    if (digitalRead(BUTTON_PIN) == LOW) {
-      buttonValue++;
-      lastDebounceTime = currentTime;
 
+  if ((currentTime - lastDebounceTime) > debounceDelay) {
+    if (digitalRead(BUTTON_PIN) == LOW && !buttonPressed) {
+      buttonPressed = true;
+      buttonPressedTime = currentTime;
+    }
+    lastDebounceTime = currentTime;
+  }
+
+  if (digitalRead(BUTTON_PIN) == HIGH && buttonPressed) {
+    unsigned long holdingTime = currentTime - buttonPressedTime;
+    if (holdingTime >= 3000) {
+      encoderPos = 0;
+    } else {
+      buttonValue++;
       if (buttonValue >= 3) {
         menuChange = true;
       }
     }
+    buttonPressed = false;
   }
 }
 
-
 void loop() {
-
   if ((buttonValue == 1) && (!recordingPrinted)) {
     encoderPos = 0;
     lcd.print("ING...");
     recordingPrinted = true;
-      
+
   } else if ((buttonValue == 2) && (!calculated)) {
     lcd.clear();
 
@@ -102,40 +111,42 @@ void loop() {
   } else if (calculated) {
     if ((oldEncPos != encoderPos) || (menuChange)) {
       if (buttonValue % 2 == 0) {
-            Serial.println(encoderPos);
+        Serial.println(encoderPos);
 
-            lcd.clear();
-            lcd.setCursor(0, 0);
-            lcd.print("Encoder: ");
-            lcd.print(encoderPos);
-            lcd.setCursor(13, 0);
-            lcd.print("tks");
-            lcd.setCursor(0, 1);
-            lcd.print("Dist: ");
-            lcd.print((encoderPos * circum) / 20);
-            lcd.setCursor(14, 1);
-            lcd.print("cm");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Encoder: ");
+        lcd.print(encoderPos);
+        lcd.setCursor(13, 0);
+        lcd.print("tks");
+        lcd.setCursor(0, 1);
+        lcd.print("Dist: ");
+        lcd.print((encoderPos * circum) / 20);
+        lcd.setCursor(14, 1);
+        lcd.print("cm");
 
-          } else {
+      } else {
 
-            lcd.clear();
-            lcd.setCursor(0, 0);
-            lcd.print("Circum: ");
-            lcd.print(circum);
-            lcd.setCursor(14, 0);
-            lcd.print("cm");
-            lcd.setCursor(0, 1);
-            lcd.print("Diam: ");
-            lcd.print(diam);
-            lcd.setCursor(14, 1);
-            lcd.print("cm");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Circum: ");
+        lcd.print(circum);
+        lcd.setCursor(14, 0);
+        lcd.print("cm");
+        lcd.setCursor(0, 1);
+        lcd.print("Diam: ");
+        lcd.print(diam);
+        lcd.setCursor(14, 1);
+        lcd.print("cm");
 
-          }
+      }
 
       oldEncPos = encoderPos;
       menuChange = false;
     }
   }
 }
+
+
 
 
